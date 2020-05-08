@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Password Protecting Your Static Site Without A Server</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+
+    <meta http-equiv="cache-control" content="max-age=0"/>
+    <meta http-equiv="cache-control" content="no-cache"/>
+    <meta http-equiv="expires" content="0"/>
+    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+    <meta http-equiv="pragma" content="no-cache"/>
+
+    <meta name="robots" content="noindex">
+
+    <link rel="stylesheet" href="reset.css" />
+    <link rel="stylesheet" href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" />
+
+    <style>
+      html, body {
+        height: 100%;
+        width: 100%;
+      }
+
+      .password-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        height: 100%;
+        background-color: #798fa8;
+      }
+    </style>
+  </head>
+
+  <body>
+    <section class="password-container">
+
+      <div class="w-full max-w-xs mb-4">
+        <div class="p-2 bg-indigo-800 items-center text-indigo-100 leading-none lg:rounded-full flex lg:inline-flex" role="alert">
+          <span class="flex rounded-full bg-indigo-500 uppercase px-2 py-1 text-xs font-bold mr-3">New</span>
+          <a href="https://forwardjs.com/ottawa/" rel="noopener noreferrer" target="_blank"><span class="font-semibold mr-2 text-left flex-auto">This talk will be presented at ForwardJS Ottawa!</span></a>
+          <svg class="fill-current opacity-75 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M12.95 10.707l.707-.707L8 4.343 6.586 5.757 10.828 10l-4.242 4.243L8 15.657l4.95-4.95z"/></svg>
+        </div>
+      </div>
+      <div class="w-full max-w-xs">
+        <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" id="password-form" action="">
+          <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password-input">
+              Password Protected
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" id="password-input" type="password" name="password" placeholder="Enter password here" autofocus />
+          </div>
+          <div class="flex items-center justify-between">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+              Submit
+            </button>
+          </div>
+        </form>
+        <p class="text-center text-gray-500 text-xs">
+          See the full source code at <a href="https://github.com/chrisrng/forward-js-demo">Chris Ng's GitHub</a>.
+        </p>
+      </div>
+    </section>
+
+    <script>
+      async function decrypt(ciphertext, password) {
+        const pwUtf8 = new TextEncoder().encode(password);
+        const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8);
+        const iv = ciphertext.slice(0,24).match(/.{2}/g).map(byte => parseInt(byte, 16));
+        const alg = {
+          name: 'AES-GCM',
+          iv: new Uint8Array(iv),
+        };
+        const key = await crypto.subtle.importKey('raw', pwHash, alg, false, ['decrypt']);
+        const ctStr = atob(ciphertext.slice(24));
+        const ctUint8 = new Uint8Array(ctStr.match(/[\s\S]/g).map(ch => ch.charCodeAt(0)));
+        const plainBuffer = await crypto.subtle.decrypt(alg, key, ctUint8);
+        const plaintext = new TextDecoder().decode(plainBuffer);
+        return plaintext;
+      }
+
+      document.getElementById('password-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var passwordInput = document.getElementById('password-input');
+        var password = passwordInput.value;
+        var cipherText = `6b2e8de71df6e6f4da4c5928Pcq1ENzrloCOvxOYUHJ6Eo1GWi0K3aWDzyYH14qWhGwEy7OKxPSvdbpWawVqjJ+iUGrQ+3XULXPleU3f9s0fFuS/wGfJ/ng4vxNYx6+QvHcvz6T9uqYrcoDLLAjc9ECYBmNq2OmvmX4Sl+B2l5kQDLSzxsFkcXj4IATEQG6k8p5p67Cqs97HZzLKA+uCK9eGQdMu9hCYZIV3R3t+adKcw+eR4Y/xjN5OMHR+I5FrO2y5Jnar8jDOJqYCZtNvLrwtineFuKrmDaeJF22z/EJi2WoD9XtamLb2HgDnsC+waRBmp/B8I1Vm37jKUQD+4ZLNqjBUxMfdi3zeiLP4nn3OVdZjAk4aO3l6iM9idtbUDPKG7vwHIGMOgwNbxyyXRrwRuQk3fuoRIE+r/JEL4G/QdHD26ICgSa89dD2DxOdBhheKbXTSvhVy94h5sd36kLakjHyAQxAX8BSV70gR7WwQs/8FSteVYhXRlCNX9Sq3jZ5m/xCfaShdcrn+uL0D7mXEgYlpr9imK/3ZE2NZPtKOh3dHUkoKItCm+Ouh5pO0F6Hy3Lf3TK4IXUgxrjlu5hHUGNKa8pbcM3Q2sTPhBX5y4fWklGYUSfRXxL17gBKhibufodsSC2VXk8twrwGhcQpMXWRCwekyzD33220mQCIMfN5wCiFAO5RPk+0viJQ2svyuVem21UCfgHDusZmR1dyqJZRhedViUKMd+eRlY0xYThBY0VIvYzakmDMeyihNpUFVFXC82qcQ7j5ZgbHeawD6lTHvhs6gl8uDuy8rM+YxQTjlLzp25j1meakszrM4PxGoH3LGwy0ul7kGQViQhiFpuxXWobxvu/hwKNHNqb9GFc6bIul/bgsErYLNl+K7ve+KN4DE381USEuI72hi1TZeYRS1m7B0TwcxyEY1qTjT/+8StT9vQKvdA1LbLqrRRJIv/q5pJGahxY9VEGubEzoh2/DscCjjDETuaA421aL2zWTvcr5CotJlCuhnUK6daO2C4acLdCn1uWetyyE7bz2yuxAN2SLiwIT21nEdEuebHiztbblceiBVU15Jesn1l4wIvBap9Yz8ysmKCAW8V6ffSY0cItY5qFyR/jj1s5qizimfhGOjrlTePeLpnnJUDR+r8j0F2RibVH3xLMVQY0DczgL5E6cuKWlPY3ANMmA0SrIcnzzcpU6h9dhl3jwSMMXOTDBje1OF2TA/wXzq2vajSruSd629XNb1qxq+JolmZ93rX0JapaLwcYTQlxG6HG1EJo43Cn58gtb6QXi+HD4HfrjhAitLzp8wMiDRNGZvG2ffv5aG7OE8j/pLqfBKCosfTkihE5HkHidnSfYcM+GeA7LR0gr5AgtRzymgqdBeAYxuMRK4yXeXBHJo3SG9TD+BKZbPBdZuE5oSyV11NvIvyxHd8WuuipaN40+YPTZLNWnc3UvEOsJ4Qh1Tkn6X63A/tdNF5RDZqB7tdOW1SqR3NqA1euscBVyfsR2xyh1TvrO6bAJCDtIhSK8Xy32eC4BRnYT7JCPpqnu3YGkgGN7NrVGmKYezrx2xLnDsGHb+CY5A6xI1Gegv0uKDvQAiXlFsZBTqLAnYcAJqu/ZEu+l9YjZdoNlwse3I+kV7uBSv0XwRaK6GHvwmGESIdyss4v2QhOoldqY/5LgCWLpEeq1G8ZAyFXwK9QpTtTLfQN06RV1ALcOuhqQc9a3VAblJvX9m/+JoZm1zqcLUW/dZO+WfsEAKQa+oeekBogXU4L2roigmRA1Qkocsna5seE8FdsWnDJU6qPEERHgw/gTu9OJ+4zGW+f0HKMihhYlm8I7xUFEdK/fqrim0GmpXxJXHkq/HZjR5imgIXkSeaon506ee0QYAkJkwBIV7zSWc3CbrPW2N3jXv28gyOYS5zv4TpdpD0ANgDX9DAObiFV1IfbwvjB/qSAoCmma5urxNCaGgwTjrfXXfc5dQGETLTyawoUGWI7d1RpX3T9ARmsJSSuOQGl2Pn47Won8PeGYNuBB3WWq0zKyN70QC3SdgFgH5dvgieXFyQoZO3wWF3189dad5R7PI+k71K9J+ZK/zeH/NAMvOsCuTipY01xHlEUTDBAd/WqZ7/sUtNQqQxcN8QggSrCudAwduIAOFvMzFry1x0kX+V3/+2gSzWNgsfTJ3S5SacNNNJ+yZhZrpWLUoG4GjFP0YpP8CMfRfEhjoPWzQ3BfSKBGhR+cVa/k47W8+4U6c+NO8cfnpuW7M88mq`;
+
+        return decrypt(cipherText, password).then(plainText => {
+            document.write(plainText);
+            document.close();
+        }).catch((err) => {
+            alert('Wrong password, please try again!');
+        });
+      });
+    </script>
+  </body>
+</html>
